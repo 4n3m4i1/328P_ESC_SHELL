@@ -111,6 +111,7 @@
 #define DELETE		127
 #define CTRL_R		18
 #define CTRL_A		1
+#define CTRL_N		14
 
 #ifndef	EXASCII
 #define GFX_CHAR	'#'
@@ -767,22 +768,10 @@ uint8_t interpret(INSTRUCT_STRUCT *operation){
 		break;
 		
 		case 5:	// Delay
-		//	T2_1MS_SETUP
-			
 			for(uint16_t a = 0; a < operation->DATA; a++){
 				T2_1MS_SETUP_ENC
 				while(WAIT_FLAG_T2);
 			}
-			
-			/*
-			for(uint8_t a = 0; a < ((uint8_t)(operation->DATA >> 8)); a++){
-				for(uint8_t b = 0; b < ((uint8_t)(operation->DATA)); b++){
-					TIFR2 |= (1 << TOV2);
-					T2_BEGIN_1MS
-					while(WAIT_FLAG_T2);
-				}
-			}
-			*/
 		break;
 		case 6:	// Type Set
 			if(operation->DATA){		// > 0x00 is valid type, 0x00 is error on set
@@ -865,6 +854,8 @@ void zepto_editor(COMPILED_INSTR* work_space, uint8_t len){
 	//  101 - Update Cursor
 	//	....
 	//	105 - Update Cursor Mode Text (INS vs. OVR)
+	//  ....
+	//	127	- Clear buffer
 	uint8_t zepto_mode = 100;
 	
 	// Line length of 20
@@ -948,6 +939,10 @@ void zepto_editor(COMPILED_INSTR* work_space, uint8_t len){
 					if(sm_rval == CTRL_R){
 						// Run in place
 						zepto_mode = 17;
+					} else
+					if(sm_rval == CTRL_N){
+						// Clear buffer
+						zepto_mode = 127;
 					} else
 					if(sm_rval == CTRL_A){
 						// Help Menu
@@ -1091,6 +1086,17 @@ void zepto_editor(COMPILED_INSTR* work_space, uint8_t len){
 				zepto_mode = 1;
 			break;
 			////////////////////////////////////////////////////////////////////////////
+			case 127:
+				for(uint8_t n = 0; n < Z_LINE_CT; n++){
+					for(uint8_t m = 0; m < Z_LINE_LEN; m++){
+						zepto_array[m][n] = 0x00;
+					}
+				}
+				cursor_x = 0;
+				cursor_y = 0;
+				zepto_mode = 100;
+			break;
+			////////////////////////////////////////////////////////////////////////////
 			default:
 				// Error on mode set, exit program
 				zepto_mode = 0x00;
@@ -1144,7 +1150,8 @@ void zepto_help_menu(){
 	
 	const char zep_help_0[] = "CTRL+R: Interpret\0";
 	const char zep_help_1[] = "CTRL+E: Compile\0";
-	const char zep_help_2[] = "CTRL+X: Exit\0";
+	const char zep_help_2[] = "CTRL+N: Clear\0";
+	const char zep_help_3[] = "CTRL+X: Exit\0";
 	
 	wr_o_cl = (wr_o_cl) ? 0 : 1;
 	
@@ -1155,9 +1162,11 @@ void zepto_help_menu(){
 		term_Set_Cursor_Pos(TERM_H - 9, TERM_W - 18);
 		serialWriteStr(zep_help_1);
 		term_Set_Cursor_Pos(TERM_H - 8, TERM_W - 18);
-		serialWriteStr(zep_help_2);	
+		serialWriteStr(zep_help_2);
+		term_Set_Cursor_Pos(TERM_H - 7, TERM_W - 18);
+		serialWriteStr(zep_help_3);
 	} else {
-		for(uint8_t n = 0; n < 3; n++){
+		for(uint8_t n = 0; n < 4; n++){
 			term_Set_Cursor_Pos(TERM_H - (10 - n), TERM_W - 18);
 			for(uint8_t m = 0; m < 17; m++){
 				serialWrite(' ');
