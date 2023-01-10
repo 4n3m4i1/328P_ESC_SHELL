@@ -63,6 +63,8 @@
 							WAIT_FLAG_T2 = 1;		\
 							TCCR2B = ((1 << CS21) | (1 << CS20));
 
+// Strobe toggle for scope triggering
+#define TOGGLE_INDIC_STROBE PORTD ^= (1 << PIND7);
 
 // Standard 80 x 24 terminal
 #define TERM_W		80
@@ -169,6 +171,12 @@ typedef struct{
 	uint16_t DATA;
 } INSTRUCT_STRUCT;
 
+
+typedef struct{
+	uint8_t *addr;
+	uint16_t data;
+} COMPILED_INSTR;
+
 uint8_t parse_entry(char *user_entry, uint8_t run_instantly, INSTRUCT_STRUCT *INS_OUT);
 uint8_t interpret(INSTRUCT_STRUCT *operation);
 
@@ -178,7 +186,7 @@ volatile uint8_t WAIT_FLAG_T2 = 0;
 #define Z_LINE_LEN	20
 #define Z_LINE_CT	20
 
-void zepto_editor(INSTRUCT_STRUCT* work_space, uint8_t len);
+void zepto_editor(COMPILED_INSTR* work_space, uint8_t len);
 uint8_t last_char(const char str[Z_LINE_LEN][Z_LINE_CT], uint8_t row_);
 void zepto_frame_print();
 void zepto_frame_cleanup();
@@ -200,6 +208,8 @@ int main(void){
 	
 	init_gp_timers();		// Initiate General Delay Timers
 	init_timer_1();			// Initiate PWM generation Timer, keep output low
+	
+	DDRD |= (1 << PIND7);	// Scope trigger indicator strobe, toggle state on output set
 	
     while (1){
 		switch(OA_STATE){
@@ -378,6 +388,8 @@ void goto_shell(){
 				for(uint8_t n = 0; n < MAX_ENTRY_LEN; n++){
 					if(tmp_buf[n]){
 						line_entry[n][bottom_line] = tmp_buf[n];	
+					} else {
+						line_entry[n][bottom_line] = 0x00;		// Necessary to reset screen/history buffer contents
 					}
 					tmp_buf[n] = 0x00;
 				}
@@ -554,47 +566,7 @@ uint8_t parse_entry(char *user_entry, uint8_t run_instantly, INSTRUCT_STRUCT *IN
 	
 	if(rd_ptr == 0xFF) return 4;
 	
-	
-//	uint8_t t_ct = 0;
-	/*
-	for(uint8_t n = rd_ptr; n < MAX_ENTRY_LEN; n++){
-		if(user_entry[n] == 0x00 || user_entry[n] == ' '){
-			rd_ptr = n;
-			break;
-		} else {
-			if(user_entry[n] == 'u'){
-				scalar_ = 0;
-				rd_ptr = n;
-				break;
-			} else if(user_entry[n] == 'm'){
-				scalar_ = 1;
-				rd_ptr = n;
-				break;
-			} else if(user_entry[n] == 's'){
-				scalar_ = 2;
-				rd_ptr = n;
-				break;
-			} else {
-				arg_0_tmp[t_ct] = user_entry[rd_ptr];
-				t_ct += 1;	
-			}	
-		}
-	}
-	
-	// If user put a space for the units
-	for(rd_ptr = rd_ptr; rd_ptr < MAX_ENTRY_LEN; rd_ptr++){
-		if(user_entry[rd_ptr] == 'u'){
-			scalar_ = 0;
-			break;
-		} else if(user_entry[rd_ptr] == 'm'){
-			scalar_ = 1;
-			break;
-		} else if(user_entry[rd_ptr] == 's'){
-			scalar_ = 2;
-			break;
-		}
-	}
-	*/
+
 	// Remember:
 	//	PB2 == COMPB
 	//	COMPA == TOP
@@ -611,9 +583,8 @@ uint8_t parse_entry(char *user_entry, uint8_t run_instantly, INSTRUCT_STRUCT *IN
 	//serialWrite('\t');
 	//term_Send_Val_as_Digits(rd_ptr);
 	
-	term_Set_Cursor_Pos(15, 2);
+	term_Set_Cursor_Pos(15, 3);
 	serialWrite('A');
-	serialWrite('0');
 	serialWrite(' ');
 	for(uint8_t q = 0; q < 8; q++){
 		serialWrite(' ');
@@ -636,7 +607,6 @@ uint8_t parse_entry(char *user_entry, uint8_t run_instantly, INSTRUCT_STRUCT *IN
 		// Scale time measurements
 		
 		if(INSTR.OPCODE == 4){
-		//if(INSTR.OPCODE == 2 || INSTR.OPCODE == 4 || INSTR.OPCODE == 5){
 			if(scalar_ == 0x00){
 				// us
 				tmp_ = tmp_ / 1000000.0f;
@@ -724,9 +694,6 @@ uint8_t parse_entry(char *user_entry, uint8_t run_instantly, INSTRUCT_STRUCT *IN
 		}
 	} else {}
 	
-	//term_Set_Cursor_Pos(5, 38);
-	//serialWrite('E');
-	
 	term_Set_Cursor_Pos(18, 3);
 	serialWrite('I');
 	serialWrite(' ');
@@ -756,6 +723,7 @@ uint8_t interpret(INSTRUCT_STRUCT *operation){
 		case 0:					// Output Set on PB2
 			if(operation->DATA)	DDRB |= (1 << PINB2);
 			else DDRB &= ~(1 << PINB2);
+			TOGGLE_INDIC_STROBE
 		break;
 		
 		case 1:					// Set Frequency, value passed as data == COMPA (x1 pre)
@@ -774,6 +742,7 @@ uint8_t interpret(INSTRUCT_STRUCT *operation){
 				SET_T1_PRE_1
 			}
 			OCR1A = operation->DATA;									// Set TOP
+			TOGGLE_INDIC_STROBE
 		break;
 		
 		case 3:					// Duty Set
@@ -790,6 +759,7 @@ uint8_t interpret(INSTRUCT_STRUCT *operation){
 		
 		case 4:	// Hi Time
 			OCR1B = operation->DATA;
+			TOGGLE_INDIC_STROBE
 		break;
 		
 		case 5:	// Delay
@@ -837,7 +807,9 @@ uint8_t interpret(INSTRUCT_STRUCT *operation){
 		default:
 			ret_val = 4;		// Syntax error or unrecognized instruction
 		break;	
+	
 	}
+	
 	
 	return (uint8_t)ret_val;
 }
@@ -853,7 +825,6 @@ void goto_credits(){
 	// Me
 }
 
-
   //////////////////////////////////////////////////////////////////////////
  //							ZEPTO EDITOR								 //
 //////////////////////////////////////////////////////////////////////////
@@ -865,7 +836,7 @@ void goto_credits(){
 
 char zepto_array[Z_LINE_LEN][Z_LINE_CT] = {0x00};
 
-void zepto_editor(INSTRUCT_STRUCT* work_space, uint8_t len){
+void zepto_editor(COMPILED_INSTR* work_space, uint8_t len){
 	zepto_frame_cleanup();
 	zepto_frame_print();
 	uint16_t read_val;
@@ -1026,10 +997,6 @@ void zepto_editor(INSTRUCT_STRUCT* work_space, uint8_t len){
 			
 			////////////////////////////////////////////////////////////////////////////
 			case 16:											// Compile
-			
-				zepto_mode = 1;
-			break;
-			////////////////////////////////////////////////////////////////////////////
 			case 17:											// Interpret Program in Place
 				for(uint8_t n = 0; n < Z_LINE_CT; n++){
 					if(zepto_array[0][n]){
@@ -1044,8 +1011,12 @@ void zepto_editor(INSTRUCT_STRUCT* work_space, uint8_t len){
 								}
 							
 						}
+						if(zepto_mode == 17){							// Interpret
+							parse_entry(zep_line_arr, 1, NULL);	
+						} else {										// Compile
+							
+						}
 						
-						parse_entry(zep_line_arr, 1, NULL);
 						for(uint8_t p = 0; p < Z_LINE_LEN; p++){
 							zep_line_arr[p] = 0x00;
 						}
