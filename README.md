@@ -5,6 +5,9 @@ interface.
 Any 328P board that has `PB6` and `UART` broken out can run the bare  
 minimum functionality. Default configuration is `1M BAUD 8N1`.  
   
+## Hardware Connections
+- `PB6` PWM Output
+- `PD7` Trigger Strobe output, toggles on any change to PWM freq or duty
   
 ## How To
 Connecting a board to your computer (FTDI, CH4XX, etc..), then open the  
@@ -75,9 +78,10 @@ making its execution functionality akin to that of a `.sh` script.
 - Floats are awful but this was hacked together too quickly to care
 - AS7 linker did not like libraries today, so library contents are just pasted in.... looks awful  
 - Input error rejection really doesn't check beyond the lead char. Malformed entries will be rejected, but no indication will be made that this has happened.  
-- Same as above, but a general lack of presenting errors to the user.  
+- Kinda same as above, but a general lack of presenting errors to the user.  
 - Realtime compiled program mode not sorted.  
 - Binary size is too large (approx 6.5kB) (back to the float issue a bit here...)
+- Interpret speed is laughably slow for a lot of reasons, probably won't change though
 
 ## Future Additions  
 - ultra tiny file system support
