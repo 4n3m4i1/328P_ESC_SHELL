@@ -67,11 +67,20 @@ The help menu within Zepto can be presented with `CTRL+A`.
 Zepto can utilize the same interpreter as standard text entry,  
 making its execution functionality akin to that of a `.sh` script.  
   
-### Zepto Commands
+### Zepto Keybinds
 - `CTRL+A` Toggle on screen help menu
 - `CTRL+X` Exit Zepto. The currently loaded buffer will persist until power off or the user edits the program again.
 - `CTRL+R` Run in Place. Interpret the program written in the on screen buffer line by line.
 - ` ~ `    Toggle `INSERT` (default) and `OVERWRITE` cursor mode
+
+### Zepto Specific Commands
+Zepto offers internal functions, greatly expanding what one can produce in a short script.
+These commands MUST follow specific typing convention or undefined behavior WILL occur.  
+There is no decent error checking on these and very long loops can result from malformed input.  
+- `j LL CC` Jump to line `LL` (01-20) `CC` (01-99) times, where both must be given as 2 char entries (ie. line 5 would be typed `05`)
+
+#### Zepto Command Examples
+- `j 04 10` Will jump to line `04` `10` times, jumps are typically placed after a string of commands, if this is the case the total number of instruction string executions would be `11`, as there was an execution before the jumps began. It is a good idea to subtract `01` from the loop counter if you require a specific number of iterations.
   
   
 ## Known Issues, Bugs, and More
