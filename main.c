@@ -758,7 +758,11 @@ uint8_t interpret(INSTRUCT_STRUCT *operation){
 		break;
 		
 		case 4:	// Hi Time
-			OCR1B = operation->DATA;
+			if(TCCR1B & (1 << CS10)){			// If prescale 1
+				OCR1B = operation->DATA;	
+			} else {
+				OCR1B = operation->DATA >> 3;	
+			}
 			TOGGLE_INDIC_STROBE
 		break;
 		
