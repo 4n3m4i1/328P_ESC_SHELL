@@ -998,6 +998,8 @@ void zepto_editor(COMPILED_INSTR* work_space, uint8_t len){
 			////////////////////////////////////////////////////////////////////////////
 			case 16:											// Compile
 			case 17:											// Interpret Program in Place
+				read_val = 0x00;
+				sm_rval = 0x01;
 				for(uint8_t n = 0; n < Z_LINE_CT; n++){
 					if(zepto_array[0][n]){
 						for(uint8_t q = 0; q < Z_LINE_LEN; q++){
@@ -1011,8 +1013,31 @@ void zepto_editor(COMPILED_INSTR* work_space, uint8_t len){
 								}
 							
 						}
+						
 						if(zepto_mode == 17){							// Interpret
-							parse_entry(zep_line_arr, 1, NULL);	
+							if(zep_line_arr[0] == 'j' && zep_line_arr[1] == ' ' && sm_rval){					// Jump pseudo instruction
+								if(!read_val){						// If this is the first time hitting the jump, set the jump counter
+									sm_rval = (zep_line_arr[6] != ' ' && zep_line_arr[6]) ? (10 * (zep_line_arr[5] - '0') + (zep_line_arr[6] - '0')) : (zep_line_arr[5] - '0');	// # times to jump
+									
+									term_Set_Cursor_Pos(TERM_H / 2, TERM_W - 4);
+									term_Send_Val_as_Digits(sm_rval);
+									
+									
+									
+									read_val = 1;
+								}
+								if(sm_rval){
+									n = (zep_line_arr[3] != ' ' && zep_line_arr[3]) ? (10 * (zep_line_arr[2] - '0') + (zep_line_arr[3] - '0')) : (zep_line_arr[2] - '0');
+									n -= 2;		// -1 for index alignment, -1 for ++ in for loop	
+									sm_rval -= 1;
+									term_Set_Cursor_Pos(TERM_H / 2 - 1, TERM_W - 4);
+									term_Send_Val_as_Digits(n);
+								}
+								
+								//	sm_rval & read_val used as burner vars here
+							} else {
+								parse_entry(zep_line_arr, 1, NULL);		
+							}
 						} else {										// Compile
 							
 						}
