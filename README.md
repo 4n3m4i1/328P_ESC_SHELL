@@ -16,7 +16,7 @@ Recommendations:
 - Linux: `Minicom`
 - Windows: `TeraTerm`  
   
-The command line supports 8 commands currently:  
+The command line supports 10 commands currently:  
 - `OUTPUT {1,0}`
 - `FREQ {FLOAT} [Hz]`
 - `PERIOD {FLOAT} [us],(ms, s)`
@@ -25,6 +25,8 @@ The command line supports 8 commands currently:
 - `STALL {INT} [ms]`
 - `TYPE {ESC, SERV}`
 - `ZEPTO`
+- `mSub`
+- `mAdd`
   
 Units within `[]` are implicit, and do not need to be provided.  
 If units are not mentioned, the entry is unit-less.  
@@ -43,6 +45,8 @@ Examples will be listed below.
 - `STALL {INT} [ms]` Blocking delay of `{INT}` milliseconds
 - `TYPE {ESC,SRV}` Loads `ESC` or `SERVO` presets, does not change `OUTPUT` state.
 - `ZEPTO` Opens the teeny text editor Zepto where sequentially executed programs can be made.  
+- `mSub {INT}` Subtracts `{INT}` microseconds from the current high pulse time
+- `mAdd {INT}` Adds `{INT}` microseconds to the current high pulse time
   
 #### Presets
 - `ESC` 400.0 Hz, 1500us high time (center for most ESCs)  
@@ -51,13 +55,14 @@ Examples will be listed below.
 ### Examples and General Text Entry Tips
 The only character that matters for functionality is the leading char.  
 One can shorten entries drastically at the cost of readability. Entries are not case sensitive.  
-
+Math functions require the first 2 characters of their mnemonic minimum.
   
 Examples:
 - `OUTPUT 1` == `OUT 1` == `O 1` == `o 1`
 - `HI_TIME 1500us` == `hi 1500u` == `h 1500`
 - `FREQ 1100.0` == `f 1100`
 - `ZEPTO` == `zepto` == `z`  
+- `mAdd 200` == `mA 200` == `ma 200`
   
   
 ## Zepto
