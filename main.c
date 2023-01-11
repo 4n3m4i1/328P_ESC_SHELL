@@ -559,6 +559,25 @@ uint8_t parse_entry(char *user_entry, uint8_t run_instantly, INSTRUCT_STRUCT *IN
 			INSTR.OPCODE = 7;
 		break;
 		
+		// Math functions
+		case 'M':
+		case 'm':
+		//char lead_letter = user_entry[rd_ptr];
+			switch(user_entry[rd_ptr + 1]){
+				case 'S':
+				case 's':
+					// Subtract
+					INSTR.OPCODE = 36;
+				break;
+				
+				case 'A':
+				case 'a':
+					// Add
+					INSTR.OPCODE = 37;
+				break;
+			}
+		break;
+		
 		default:
 			// Syntax error
 			rd_ptr = 0xFF;
@@ -595,7 +614,8 @@ uint8_t parse_entry(char *user_entry, uint8_t run_instantly, INSTRUCT_STRUCT *IN
 		serialWrite(arg_0_tmp[q]);
 	}
 	
-	if(INSTR.OPCODE > 0 && INSTR.OPCODE < 6){
+	// Numbers and math modes
+	if((INSTR.OPCODE > 0 && INSTR.OPCODE < 6) || (INSTR.OPCODE > 30 && INSTR.OPCODE < 60)){
 		arg_0_tmp[7] = 0x00;
 		float tmp_ = (float)(strtod(arg_0_tmp, NULL));
 		//float tmp_ = (float)(atof(arg_0_tmp));
@@ -625,7 +645,7 @@ uint8_t parse_entry(char *user_entry, uint8_t run_instantly, INSTRUCT_STRUCT *IN
 			case 4:					// Hi Time, destination OCR1B
 				if(INSTR.OPCODE != 1){	// period -> freq, time hi -> 'freq' equiv
 					tmp_ = 1.0f / tmp_;
-					if(INSTR.OPCODE != 4) INSTR.OPCODE = 1;	// Convert back to FREQ from PERIOD
+					if(INSTR.OPCODE == 2) INSTR.OPCODE = 1;	// Convert back to FREQ from PERIOD
 				}
 				
 				if(tmp_ > 244.0f){		// Div 1
@@ -653,10 +673,12 @@ uint8_t parse_entry(char *user_entry, uint8_t run_instantly, INSTRUCT_STRUCT *IN
 				INSTR.DATA = (uint16_t)(65535.0f * (tmp_ / 100.0f));
 			break;
 			
-			case 5:					// Stall (Delay)
-				//INSTR.DATA = (uint16_t) (tmp_ * 1000.0f);		// Convert to ms of delay
-				INSTR.DATA = (uint16_t) (tmp_);					// ms of delay
+			case 5:					// Stall (Delay ms)
+			case 36:				// Math subtract
+			case 37:				// Math add
+				INSTR.DATA = (uint16_t) (tmp_);	
 			break;
+
 		}
 	} else
 	if(INSTR.OPCODE == 7){
@@ -679,11 +701,6 @@ uint8_t parse_entry(char *user_entry, uint8_t run_instantly, INSTRUCT_STRUCT *IN
 			}
 		}
 		
-		//term_Set_Cursor_Pos(3, 55);
-		//serialWrite('S');
-		//serialWrite(' ');
-		//term_Send_Val_as_Digits(scalar_);
-		
 		if(arg_0_tmp[scalar_] == 'e' || arg_0_tmp[scalar_] == 'E'){		// ESC Default: 1500us Center, 400Hz
 			INSTR.DATA = 0x01;
 		} else
@@ -694,6 +711,7 @@ uint8_t parse_entry(char *user_entry, uint8_t run_instantly, INSTRUCT_STRUCT *IN
 			INSTR.DATA = 0x00;
 		}
 	} else {}
+	
 	
 	term_Set_Cursor_Pos(18, 3);
 	serialWrite('I');
@@ -748,12 +766,6 @@ uint8_t interpret(INSTRUCT_STRUCT *operation){
 		
 		case 3:					// Duty Set
 			ret_val = (uint16_t)(((float)operation->DATA / 65535.0f) * (float)OCR1A);
-			/*
-			term_Set_Cursor_Pos(20, 25);
-			serialWrite('V');
-			serialWrite(' ');
-			term_Send_16_as_Digits(ret_val);
-			*/
 			OCR1B = ret_val;
 			ret_val = 1;
 		break;
@@ -795,6 +807,24 @@ uint8_t interpret(INSTRUCT_STRUCT *operation){
 		break;
 		case 7:	// Zepto
 			zepto_editor(NULL, 0);
+		break;
+		
+		case 36:
+			// Math: Subtract
+			if(TCCR1B & (1 << CS10)){				// If prescale 1
+				OCR1B -= (operation->DATA << 4);	// * 16 for 16 cts / us @ 1x pre
+			} else {
+				OCR1B -= (operation->DATA << 1);	// *2 as 2 counts per ms
+			}
+		break;
+		
+		case 37:
+		// Math: Add
+		if(TCCR1B & (1 << CS10)){				// If prescale 1
+			OCR1B += (operation->DATA << 4);	// * 16 for 16 cts / us @ 1x pre
+		} else {
+			OCR1B += (operation->DATA << 1);	// *2 as 2 counts per ms
+		}
 		break;
 		
 		default:
@@ -1035,7 +1065,8 @@ void zepto_editor(COMPILED_INSTR* work_space, uint8_t len){
 								
 								//	sm_rval & read_val used as burner vars here
 							} else {
-								parse_entry(zep_line_arr, 1, NULL);		
+								// Standard instruction
+								parse_entry(zep_line_arr, 1, NULL);
 							}
 						} else {										// Compile
 							
