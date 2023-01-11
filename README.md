@@ -24,9 +24,9 @@ The command line supports 10 commands currently:
 - `HI_TIME {FLOAT} [us]`
 - `STALL {INT} [ms]`
 - `TYPE {ESC, SERV}`
+- `mSub {INT} [us]`
+- `mAdd {INT} [us]`
 - `ZEPTO`
-- `mSub`
-- `mAdd`
   
 Units within `[]` are implicit, and do not need to be provided.  
 If units are not mentioned, the entry is unit-less.  
@@ -44,9 +44,9 @@ Examples will be listed below.
 - `HI_TIME {FLOAT} [us]` Sets the logic `HIGH` time of the output. Frequency should be set first.
 - `STALL {INT} [ms]` Blocking delay of `{INT}` milliseconds
 - `TYPE {ESC,SRV}` Loads `ESC` or `SERVO` presets, does not change `OUTPUT` state.
+- `mSub {INT} [us]` Subtracts `{INT}` microseconds from the current high pulse time
+- `mAdd {INT} [us]` Adds `{INT}` microseconds to the current high pulse time
 - `ZEPTO` Opens the teeny text editor Zepto where sequentially executed programs can be made.  
-- `mSub {INT}` Subtracts `{INT}` microseconds from the current high pulse time
-- `mAdd {INT}` Adds `{INT}` microseconds to the current high pulse time
   
 #### Presets
 - `ESC` 400.0 Hz, 1500us high time (center for most ESCs)  
